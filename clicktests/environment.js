@@ -3,6 +3,7 @@ var child_process = require('child_process');
 var webpage = require('webpage');
 var async = require('async');
 var helpers = require('./helpers');
+var ungitServer;
 
 module.exports = Environment;
 
@@ -12,7 +13,7 @@ function Environment(page, config) {
   this.config = config || {};
   this.config.port = this.config.port || 8449;
   this.config.rootPath = (typeof this.config.rootPath === 'string') ? this.config.rootPath : '';
-  this.config.serverTimeout = this.config.serverTimeout || 15000;
+  this.config.serverTimeout = this.config.serverTimeout || 50000;
   this.config.viewportSize = this.config.viewportSize || { width: 2000, height: 2000 };
   this.config.showServerOutput = this.config.showServerOutput || false;
   this.config.serverStartupOptions = this.config.serverStartupOptions || [];
@@ -36,8 +37,8 @@ Environment.prototype.shutdown = function(callback, doNotClose) {
   this.page.onConsoleMessage = this.page.onResourceError = this.page.onError = undefined;
   this.backgroundAction('POST', this.url + '/api/testing/cleanup', undefined, function() {
     self.shutdownServer(function() {
-      callback();
       if (!doNotClose) self.page.close();
+      callback();
     });
   });
 }
@@ -116,7 +117,7 @@ Environment.prototype.startServer = function(callback) {
     '--alwaysLoadActiveBranch',
     '--logGitCommands']
     .concat(this.config.serverStartupOptions);
-  var ungitServer = child_process.spawn('node', options);
+  ungitServer = child_process.spawn('node', options);
   ungitServer.stdout.on("data", function (data) {
     if (self.config.showServerOutput) console.log(prependLines('[server] ', data));
 
@@ -136,7 +137,7 @@ Environment.prototype.startServer = function(callback) {
   });
   ungitServer.on('exit', function() {
     helpers.log('UNGIT SERVER EXITED');
-  })
+  });
 }
 
 var getRestSetting = function(method, body) {
@@ -159,7 +160,13 @@ Environment.prototype.changeTestFile = function(filename, callback) {
   this.backgroundAction('POST', this.url + '/api/testing/changefile', { file: filename }, callback);
 }
 Environment.prototype.shutdownServer = function(callback) {
-  this.backgroundAction('POST', this.url + '/api/testing/shutdown', undefined, callback);
+  // Wait for the entire process to exit.
+  ungitServer.on('exit', function() {
+    callback();
+  });
+
+  // Trigger the shutdown.
+  this.backgroundAction('POST', this.url + '/api/testing/shutdown', undefined);
 }
 Environment.prototype.createTempFolder = function(callback) {
   console.log('Creating temp folder');

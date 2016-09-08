@@ -28,7 +28,7 @@ suite.test('Init', function(done) {
 suite.test('Open repo screen', function(done) {
   page.open(environment.url + '/#/repository?path=' + encodeURIComponent(testRepoPath), function () {
     helpers.waitForElementVisible(page, '.graph', function() {
-      setTimeout(done, 1000); // Let it finnish loading
+      setTimeout(done, 1000); // Let it finish loading
     });
   });
 });
@@ -43,12 +43,15 @@ suite.test('Submodule add', function(done) {
     helpers.write(page, subRepoPath);
     helpers.click(page, '[data-ta-container="add-submodule"] [data-ta-clickable="submit"]');
 
-    setTimeout(function() { // Wait for dialog to close
-      helpers.click(page, '[data-ta-clickable="submodules-menu"]');
-      helpers.waitForElementVisible(page, '[data-ta-container="submodules"] [data-ta-clickable="subrepo"]', function() {
-        done();
+    // Wait for sub module to load.
+    helpers.waitForElementVisible(page, '[data-ta-clickable="fetch"] [data-ta-element="progress-bar"]', function() {
+      helpers.waitForElementNotVisible(page, '[data-ta-clickable="fetch"] [data-ta-element="progress-bar"]', function() {
+        helpers.click(page, '[data-ta-clickable="submodules-menu"]');
+        helpers.waitForElementVisible(page, '[data-ta-container="submodules"] [data-ta-clickable="subrepo"]', function() {
+          done();
+        });
       });
-    }, 500);
+    });
   });
 });
 

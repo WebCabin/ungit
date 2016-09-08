@@ -63,7 +63,11 @@ helpers.waitForElementNotVisible = function(page, selector, callback) {
   helpers.waitFor(page, function() {
     if (helpers.elementVisible(page, selector)) return false;
     else return true;
-  }, callback);
+  }, function(res) {
+    setTimeout(function() {
+      callback(res);
+    }, 200);
+  });
 }
 
 helpers.getClickPosition = function(page, selector) {
