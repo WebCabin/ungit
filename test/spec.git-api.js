@@ -16,6 +16,7 @@ app.use(require('body-parser').json());
 restGit.registerApi({ app: app, config: { dev: true } });
 
 var testDir;
+var testDirStats;
 var gitConfig;
 
 var req = request(app);
@@ -27,6 +28,7 @@ describe('git-api', function () {
       if (err) return done(err);
       expect(res.body.path).to.be.ok();
       testDir = fs.realpathSync(res.body.path);
+      testDirStats = fs.statSync(res.body.path);
       done();
     });
   });
@@ -96,7 +98,10 @@ describe('git-api', function () {
   it('quickstatus should say inited in inited directory', function(done) {
     common.get(req, '/quickstatus', { path: testDir }, function(err, res) {
       if (err) return done(err);
-      expect(res.body).to.eql({ type: 'inited', gitRootPath: testDir });
+      expect(res.body).to.have.property('type', 'inited');
+      expect(res.body).to.have.property('gitRootPath');
+      // Compare the identification number for each folder path to ensure they are the same folder.
+      expect(fs.statSync(res.body.gitRootPath)).to.have.property('ino', testDirStats.ino);
       done();
     });
   });
@@ -421,8 +426,8 @@ describe('git-api', function () {
     mkdirp(baseRepoPathTestDir, function(err, res) {
       common.get(req, '/baserepopath', { path: baseRepoPathTestDir }, function(err, res) {
         if (err) return done(err);
-        // Some oses uses symlink and path will be different as git will return resolved symlink
-        expect(res.body.path).to.contain(testDir);
+        // Compare the identification number for each folder path to ensure they are the same folder.
+        expect(fs.statSync(res.body.path)).to.have.property('ino', testDirStats.ino);
         done();
       });
     });

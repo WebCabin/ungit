@@ -6,7 +6,7 @@ var http = require('http');
 var config = require('../src/config');
 
 describe('credentials-helper', function () {
-
+	this.timeout(8000);
 	it('should be invokable', function(done) {
 		var socketId = Math.floor(Math.random() * 1000);
 		var payload = { username: 'testuser', password: 'testpassword' };
@@ -16,17 +16,17 @@ describe('credentials-helper', function () {
 			res.end(JSON.stringify(payload));
 		});
 
-		server.listen(config.port, '127.0.0.1');
-
-		var command = 'node bin/credentials-helper' + ' ' + socketId + ' ' + config.port + ' get';
-		child_process.exec(command, function(err, stdout, stderr) {
-			expect(err).to.not.be.ok();
-			var ss = stdout.split('\n');
-			expect(ss[0]).to.be('username=' + payload.username);
-			expect(ss[1]).to.be('password=' + payload.password);
-			server.close();
-			done();
+		server.listen(config.port, '127.0.0.1', function() {
+			var command = 'node bin/credentials-helper' + ' ' + socketId + ' ' + config.port + ' get';
+			child_process.exec(command, function(err, stdout, stderr) {
+				expect(err).to.not.be.ok();
+				var ss = stdout.split('\n');
+				expect(ss[0]).to.be('username=' + payload.username);
+				expect(ss[1]).to.be('password=' + payload.password);
+				server.close(done);
+			});
 		});
+
 	});
 
 });
